@@ -20,7 +20,7 @@ inGroup group c = c `elem` group
 mainMatch :: Pattern -> Input -> Bool
 mainMatch ('^':pattern) input = matchPattern pattern input
 mainMatch pattern input = case last pattern of 
-                        '$' -> any (matchPattern ((init pattern) ++ "\0")) $ unfold (input ++ "\0") -- add special char to the end
+                        '$' -> any (matchPattern $ (init pattern) ++ "\0")) $ unfold (input ++ "\0") -- add special char to the end
                         _  -> any (matchPattern pattern) $ unfold input
 
 
