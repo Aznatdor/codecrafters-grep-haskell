@@ -8,9 +8,15 @@ import Data.Char (isDigit)
 isWord :: Char -> Bool
 isWord c = c `elem` '_':['a'..'z']++['A'..'Z']++['0'..'9']
 
+
+inGroup :: String -> Char -> Bool
+inGroup group c = c `elem` group
+
+
 matchPattern :: String -> String -> Bool
 matchPattern "\\d" input = any isDigit input
 matchPattern "\\w" input = any isWord input
+matchPattern ('[':group) input = any (inGroup $ init group) input 
 matchPattern (x:_) input = x `elem` input
 matchPattern pattern _ =  error $ "Unhandled pattern: " ++ pattern
 
