@@ -9,16 +9,22 @@ import Data.Char (isDigit)
 isWord :: Char -> Bool
 isWord c = c `elem` '_':['a'..'z']++['A'..'Z']++['0'..'9']
 
+type Input = String
+type Pattern = String
+
 
 inGroup :: String -> Char -> Bool
 inGroup group c = c `elem` group
 
 
-mainMatch :: String -> String -> Bool
-mainMatch pattern input = any (matchPattern pattern) $ unfold input
+mainMatch :: Pattern -> Input -> Bool
+mainMatch ('^':pattern) input = matchPattern pattern input
+mainMatch pattern input = case last pattern of 
+                        '$' -> any (matchPattern ((init pattern) ++ "\0")) $ unfold (input ++ "\0") -- add special char to the end
+                        _  -> any (matchPattern pattern) $ unfold input
 
 
-matchPattern :: String -> String -> Bool
+matchPattern :: Pattern -> Input -> Bool
 matchPattern [] _ = True
 matchPattern _ [] = False
 matchPattern ('\\':'d':pattern) (c:input) = (isDigit c) && matchPattern pattern input
