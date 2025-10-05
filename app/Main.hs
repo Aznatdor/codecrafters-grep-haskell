@@ -3,12 +3,12 @@ module Main where
 import System.Environment
 import System.Exit
 import System.IO (hPutStrLn, hSetBuffering, stdout, stderr, BufferMode (NoBuffering))
+import Data.Char (isDigit)
 
 matchPattern :: String -> String -> Bool
-matchPattern pattern input = do
-  if length pattern == 1
-    then head pattern `elem` input
-    else error $ "Unhandled pattern: " ++ pattern
+matchPattern "\\d" input = any isDigit input
+matchPattern (x:_) input = x `elem` input
+matchPattern pattern _ =  error $ "Unhandled pattern: " ++ pattern
 
 main :: IO ()
 main = do
