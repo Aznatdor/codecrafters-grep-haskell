@@ -16,6 +16,7 @@ inGroup group c = c `elem` group
 matchPattern :: String -> String -> Bool
 matchPattern "\\d" input = any isDigit input
 matchPattern "\\w" input = any isWord input
+matchPattern ('[':'^':group) input = any (not . (inGroup $ init group)) input
 matchPattern ('[':group) input = any (inGroup $ init group) input 
 matchPattern (x:_) input = x `elem` input
 matchPattern pattern _ =  error $ "Unhandled pattern: " ++ pattern
