@@ -1,5 +1,6 @@
 module Main where
 
+import ParseGroup
 import System.Environment
 import System.Exit
 import System.IO (hPutStrLn, hSetBuffering, stdout, stderr, BufferMode (NoBuffering))
@@ -13,12 +14,22 @@ inGroup :: String -> Char -> Bool
 inGroup group c = c `elem` group
 
 
+mainMatch :: String -> String -> Bool
+mainMatch pattern input = any (matchPattern pattern) $ unfold input
+
+
 matchPattern :: String -> String -> Bool
-matchPattern "\\d" input = any isDigit input
-matchPattern "\\w" input = any isWord input
-matchPattern ('[':'^':group) input = any (not . (inGroup $ init group)) input
-matchPattern ('[':group) input = any (inGroup $ init group) input 
-matchPattern (x:_) input = x `elem` input
+matchPattern [] _ = True
+matchPattern _ [] = False
+matchPattern ('\\':'d':pattern) (c:input) = (isDigit c) && matchPattern pattern input
+matchPattern ('\\':'w':pattern) (c:input) = (isWord c) && matchPattern pattern input
+matchPattern ('[':'^':group) (c:input)    = case find ']' group of 
+                                                Left (-1) -> error "Could not find closing ] bracket" 
+                                                Right ind -> (not . elem c) (getGroup group) && matchPattern (drop (ind+1) group) input
+matchPattern ('[':group) (c:input) = case find ']' group of 
+                                                Left (-1) -> error "Could not find closing ] bracket"
+                                                Right ind -> elem c (getGroup group) && matchPattern (drop (ind+1) group) input
+matchPattern (x:pattern) (c:input) = (x == c) && matchPattern pattern input
 matchPattern pattern _ =  error $ "Unhandled pattern: " ++ pattern
 
 main :: IO ()
@@ -38,6 +49,6 @@ main = do
     then do
       putStrLn "Expected first argument to be '-E'"
       exitFailure
-    else do if matchPattern pattern input_line
+    else do if mainMatch pattern input_line
               then exitSuccess
               else exitFailure
