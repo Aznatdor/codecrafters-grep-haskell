@@ -1,42 +1,56 @@
 module Main where
 
-import ParseGroup
 import System.Environment
 import System.Exit
 import System.IO (hPutStrLn, hSetBuffering, stdout, stderr, BufferMode (NoBuffering))
-import Data.Char (isDigit)
+import Data.Char (isDigit, isLetter)
+import Data.List (findIndex, tails)
+import Grep.Types
+import Grep.Parser
+
+-- useful synonims
+type Input = String
+type Pattern = String
+
+-- helper functions
+getGroup :: String -> String
+getGroup pattern = takeWhile (/=']') pattern
 
 isWord :: Char -> Bool
 isWord c = c `elem` '_':['a'..'z']++['A'..'Z']++['0'..'9']
-
-type Input = String
-type Pattern = String
 
 
 inGroup :: String -> Char -> Bool
 inGroup group c = c `elem` group
 
 
+-- tries to find a match within input string
 mainMatch :: Pattern -> Input -> Bool
-mainMatch ('^':pattern) input = matchPattern pattern input
-mainMatch pattern input = case last pattern of 
-                        '$' -> any (matchPattern (init pattern ++ "\0")) $ unfold (input ++ "\0") -- add special char to the end
-                        _  -> any (matchPattern pattern) $ unfold input
+mainMatch rawPattern input
+    | head pattern == AnchorStart = matchPattern (tail pattern) input
+    | otherwise = any (matchPattern pattern) $ tails input
+    where pattern = parsePattern rawPattern
 
 
-matchPattern :: Pattern -> Input -> Bool
+-- matches pattern with string
+matchPattern :: [PatternToken] -> Input -> Bool
 matchPattern [] _ = True
+matchPattern (AnchorEnd:_) [] = True
+matchPattern (AnchorEnd:_) _ = False
 matchPattern _ [] = False
-matchPattern ('\\':'d':pattern) (c:input) = (isDigit c) && matchPattern pattern input
-matchPattern ('\\':'w':pattern) (c:input) = (isWord c) && matchPattern pattern input
-matchPattern ('[':'^':group) (c:input)    = case find ']' group of 
-                                                Left (-1) -> error "Could not find closing ] bracket" 
-                                                Right ind -> (not . elem c) (getGroup group) && matchPattern (drop (ind+1) group) input
-matchPattern ('[':group) (c:input) = case find ']' group of 
-                                                Left (-1) -> error "Could not find closing ] bracket"
-                                                Right ind -> elem c (getGroup group) && matchPattern (drop (ind+1) group) input
-matchPattern (x:pattern) (c:input) = (x == c) && matchPattern pattern input
-matchPattern pattern _ =  error $ "Unhandled pattern: " ++ pattern
+matchPattern (Meta Digit:rest) (c:input)
+    | isDigit c = matchPattern rest input
+    | otherwise = False
+matchPattern (Meta Word:rest) (c:input)
+    | isWord c = matchPattern rest input
+    | otherwise = False
+matchPattern (Group group neg:rest) (c:input)
+    | (c `elem` [x | Literal x <- group]) /= neg = matchPattern rest input
+    | otherwise = False
+matchPattern (Literal x:rest) (c:input)
+    | (x == c) = matchPattern rest input
+    | otherwise = False 
+
 
 main :: IO ()
 main = do
