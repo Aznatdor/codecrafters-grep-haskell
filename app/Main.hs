@@ -29,7 +29,20 @@ mainMatch :: Pattern -> Input -> Bool
 mainMatch rawPattern input
     | head pattern == AnchorStart = matchPattern (tail pattern) input
     | otherwise = any (matchPattern pattern) $ tails input
-    where pattern = parsePattern rawPattern
+    where pattern = (applyRepeat . parsePattern) rawPattern
+
+
+-- matches repeated token and returns all possible input
+-- tails after matching
+-- For example: repeatMatches "a" 1 3 "aaaab" -> ["aaab", "aab", "ab"]
+repeatMatches :: PatternToken -> Int -> Maybe Int -> String -> [String]
+repeatMatches _ _ _ [] = [[]]
+repeatMatches token minRep Nothing input
+    | matchPattern (replicate minRep token) (take minRep input) = drop minRep input : repeatMatches token (minRep+1) Nothing input
+    | otherwise = [] -- if no match, return input string
+repeatMatches token minRep (Just maxRep) input
+    | minRep <= maxRep && matchPattern (replicate minRep token) (take minRep input) = drop minRep input : repeatMatches token (minRep+1) (Just maxRep) input
+    | otherwise = []
 
 
 -- matches pattern with string
@@ -49,7 +62,9 @@ matchPattern (Group group neg:rest) (c:input)
     | otherwise = False
 matchPattern (Literal x:rest) (c:input)
     | (x == c) = matchPattern rest input
-    | otherwise = False 
+    | otherwise = False  
+matchPattern (Repeater token minRep maxRep:rest) input = 
+    any (matchPattern rest) $ repeatMatches token minRep maxRep input
 
 
 main :: IO ()

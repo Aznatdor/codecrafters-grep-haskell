@@ -7,8 +7,8 @@ data PatternToken = Literal Char
     | Group [PatternToken] Negative
     | AnchorStart 
     | AnchorEnd 
-    | OptionType
+    | Star | Plus | Question                -- Option types for  preproccessing
+    | Repeater PatternToken Int (Maybe Int) -- for matching
     deriving (Show, Eq)
 
 data MetaType = Word | Digit deriving (Show, Eq)
-data OptionType = Plus | Start | Question deriving (Show, Eq)
