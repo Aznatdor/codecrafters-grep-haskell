@@ -51,6 +51,7 @@ matchPattern [] _ = True
 matchPattern (AnchorEnd:_) [] = True
 matchPattern (AnchorEnd:_) _ = False
 matchPattern _ [] = False
+matchPattern (Wildcard:rest) (_:input) = matchPattern rest input
 matchPattern (Meta Digit:rest) (c:input)
     | isDigit c = matchPattern rest input
     | otherwise = False

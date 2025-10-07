@@ -15,6 +15,7 @@ parsePattern ('$':rest) = AnchorEnd : parsePattern rest -- rest is []!
 parsePattern ('+':rest) = Plus : parsePattern rest
 parsePattern ('*':rest) = Star : parsePattern rest
 parsePattern ('?':rest) = Question : parsePattern rest
+parsePattern ('.':rest) = Wildcard : parsePattern rest
 parsePattern (char:rest) = Literal char : parsePattern rest
 
 
