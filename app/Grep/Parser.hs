@@ -1,4 +1,4 @@
-module Grep.Parser where
+module Grep.Parser (parsePattern) where
 
 import Grep.Types
 
