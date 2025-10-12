@@ -17,7 +17,7 @@ mainMatch :: Pattern -> Input -> Bool
 mainMatch rawPattern input
     | head pattern == AnchorStart = matchPattern (tail pattern) input
     | otherwise = any (matchPattern pattern) $ tails input
-    where pattern = (applyRepeat . parsePattern) rawPattern
+    where pattern = (applyRepeat . parsePattern 1) rawPattern
 
 -- matches repeated token and returns all possible input
 -- tails after matching
@@ -37,7 +37,7 @@ repeatMatches token minRep (Just maxRep) input
 
 -- tries to match pattern with string
 matchPattern :: [PatternToken] -> Input -> Bool
--- Repeaters should be first to account for 0 times repetitions
+-- Repeaters should be matched first (they can match an empty string)
 matchPattern (Repeater token minRep maxRep:rest) input = 
     any (matchPattern rest) $ repeatMatches token minRep maxRep input
 matchPattern [] _ = True
@@ -46,3 +46,14 @@ matchPattern (AnchorEnd:_) _ = False
 matchPattern _ [] = False
 matchPattern (Wildcard:rest) (_:input) = matchPattern rest input
 matchPattern (Meta Digit:rest) (c:input)
+    | isDigit c = matchPattern rest input
+    | otherwise = False
+matchPattern (Meta Word:rest) (c:input)
+    | isWord c = matchPattern rest input
+    | otherwise = False
+matchPattern (Group group neg:rest) (c:input)
+    | (c `elem` [x | Literal x <- group]) /= neg = matchPattern rest input
+    | otherwise = False
+matchPattern (Literal x:rest) (c:input)
+    | (x == c) = matchPattern rest input
+    | otherwise = False  

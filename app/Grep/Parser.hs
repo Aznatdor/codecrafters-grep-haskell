@@ -1,29 +1,29 @@
-module Grep.Parser (parsePattern) where
+module Grep.Parser where
 
 import Grep.Types
 
 -- Given pattern string, converts it into list of tokens
 -- Token types are listed in app/Grep/Types.hs
-parsePattern :: String -> Int -> [PatternToken]
-parsePattern [] _ = []
-parsePattern ('\\':'d':rest) groupNum = Meta Digit : (parsePattern rest groupNum)
-parsePattern ('\\':'w':rest) groupNum = Meta Word  : (parsePattern rest groupNum)
-parsePattern ('[':'^':xs)    groupNum =
+parsePattern :: Int -> String -> [PatternToken]
+parsePattern _ [] = []
+parsePattern groupNum ('\\':'d':rest) = Meta Digit : (parsePattern groupNum rest)
+parsePattern groupNum ('\\':'w':rest) = Meta Word  : (parsePattern groupNum rest)
+parsePattern groupNum ('[':'^':xs) =
     let (group, rest) = span (/=']') xs
-    in Group (map Literal group) True : (parsePattern (drop 1 rest) groupNum)
-parsePattern ('[':xs) groupNum = let (group, rest) = span (/=']') xs in
-                            Group (map Literal group) False : (parsePattern (drop 1 rest) groupNum)
-parsePattern (')':xs) _ = error $ "unexpected ')'"
-parsePattern ('(':xs) groupNum =
+    in Group (map Literal group) True : (parsePattern groupNum (drop 1 rest))
+parsePattern groupNum ('[':xs) = let (group, rest) = span (/=']') xs in
+                            Group (map Literal group) False : (parsePattern groupNum (drop 1 rest))
+parsePattern  _ (')':xs) = error $ "unexpected ')'"
+parsePattern groupNum ('(':xs) =
     let (alterationGroup, rest, newGroupNum) = parseAlteration xs [[]] (groupNum+1) -- newGroupNum should be at lest groupNum+1. Indeed!
-    in Alteration groupNum alterationGroup : (parsePattern rest newGroupNum) -- group is reversed, which should not affect overall result.
-parsePattern ('^':rest) groupNum = AnchorStart : (parsePattern rest groupNum)
-parsePattern ('$':rest) groupNum = AnchorEnd : (parsePattern rest groupNum) -- rest is []!
-parsePattern ('+':rest) groupNum = Plus : (parsePattern rest groupNum)
-parsePattern ('*':rest) groupNum = Star : (parsePattern rest groupNum)
-parsePattern ('?':rest) groupNum = Question : (parsePattern rest groupNum)
-parsePattern ('.':rest) groupNum = Wildcard : (parsePattern rest groupNum)
-parsePattern (char:rest) groupNum = Literal char : (parsePattern rest groupNum)
+    in Alteration groupNum alterationGroup : (parsePattern newGroupNum rest) -- group is reversed, which should not affect overall result.
+parsePattern groupNum ('^':rest) = AnchorStart : (parsePattern groupNum rest)
+parsePattern groupNum ('$':rest) = AnchorEnd : (parsePattern groupNum rest) -- rest is []!
+parsePattern groupNum ('+':rest) = Plus : (parsePattern groupNum rest)
+parsePattern groupNum ('*':rest) = Star : (parsePattern groupNum rest)
+parsePattern groupNum ('?':rest) = Question : (parsePattern groupNum rest)
+parsePattern groupNum ('.':rest) = Wildcard : (parsePattern groupNum rest)
+parsePattern groupNum (char:rest) = Literal char : (parsePattern groupNum rest)
 
 -- Joins repeater token and token to be repeated
 applyRepeat :: [PatternToken] -> [PatternToken]
