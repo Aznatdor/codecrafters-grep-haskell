@@ -1,13 +1,17 @@
 module Grep.Parser where
 
-import Grep.Types
+import Data.Char (isDigit, digitToInt)
+import Grep.Types 
 
 -- Given pattern string, converts it into list of tokens
 -- Token types are listed in app/Grep/Types.hs
 parsePattern :: Int -> String -> [PatternToken]
 parsePattern _ [] = []
-parsePattern groupNum ('\\':'d':rest) = Meta Digit : (parsePattern groupNum rest)
-parsePattern groupNum ('\\':'w':rest) = Meta Word  : (parsePattern groupNum rest)
+parsePattern groupNum ('\\':x:rest)
+    | x == 'd'  = Meta Digit : (parsePattern groupNum rest)
+    | x == 'w'  = Meta Word  : (parsePattern groupNum rest)
+    | x == '\\' = Literal '\\' : (parsePattern groupNum rest)
+    | isDigit x = Backreference (digitToInt x) : (parsePattern groupNum rest)
 parsePattern groupNum ('[':'^':xs) =
     let (group, rest) = span (/=']') xs
     in Group (map Literal group) True : (parsePattern groupNum (drop 1 rest))
@@ -15,7 +19,7 @@ parsePattern groupNum ('[':xs) = let (group, rest) = span (/=']') xs in
                             Group (map Literal group) False : (parsePattern groupNum (drop 1 rest))
 parsePattern  _ (')':xs) = error $ "unexpected ')'"
 parsePattern groupNum ('(':xs) =
-    let (alterationGroup, rest, newGroupNum) = parseAlteration xs [[]] (groupNum+1) -- newGroupNum should be at lest groupNum+1. Indeed!
+    let (alterationGroup, rest, newGroupNum) = parseAlteration xs [[]] (groupNum+1) -- newGroupNum should be at least groupNum+1.
     in Alteration groupNum (map applyRepeat alterationGroup) : (parsePattern newGroupNum rest) -- group is reversed, which should not affect overall result.
 parsePattern groupNum ('^':rest) = AnchorStart : (parsePattern groupNum rest)
 parsePattern groupNum ('$':rest) = AnchorEnd : (parsePattern groupNum rest) -- rest is []!
