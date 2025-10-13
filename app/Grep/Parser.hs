@@ -16,7 +16,7 @@ parsePattern groupNum ('[':xs) = let (group, rest) = span (/=']') xs in
 parsePattern  _ (')':xs) = error $ "unexpected ')'"
 parsePattern groupNum ('(':xs) =
     let (alterationGroup, rest, newGroupNum) = parseAlteration xs [[]] (groupNum+1) -- newGroupNum should be at lest groupNum+1. Indeed!
-    in Alteration groupNum alterationGroup : (parsePattern newGroupNum rest) -- group is reversed, which should not affect overall result.
+    in Alteration groupNum (map applyRepeat alterationGroup) : (parsePattern newGroupNum rest) -- group is reversed, which should not affect overall result.
 parsePattern groupNum ('^':rest) = AnchorStart : (parsePattern groupNum rest)
 parsePattern groupNum ('$':rest) = AnchorEnd : (parsePattern groupNum rest) -- rest is []!
 parsePattern groupNum ('+':rest) = Plus : (parsePattern groupNum rest)
@@ -55,6 +55,18 @@ parseAlteration ('\\':'w':rest) acc groupNum = parseAlteration rest updatedAcc g
           updatedAcc = newHead : (drop 1 acc) -- tail won't work with list of length 1
 parseAlteration ('\\':'d':rest) acc groupNum = parseAlteration rest updatedAcc groupNum
     where token = Meta Digit
+          newHead = (head acc ++ [token])
+          updatedAcc = newHead : (drop 1 acc)
+parseAlteration ('+':rest) acc groupNum = parseAlteration rest updatedAcc groupNum
+    where token = Plus
+          newHead = (head acc ++ [token])
+          updatedAcc = newHead : (drop 1 acc)
+parseAlteration ('?':rest) acc groupNum = parseAlteration rest updatedAcc groupNum
+    where token = Question
+          newHead = (head acc ++ [token])
+          updatedAcc = newHead : (drop 1 acc)
+parseAlteration ('*':rest) acc groupNum = parseAlteration rest updatedAcc groupNum
+    where token = Star
           newHead = (head acc ++ [token])
           updatedAcc = newHead : (drop 1 acc)
 parseAlteration (c:rest) acc groupNum = parseAlteration rest updatedAcc groupNum
