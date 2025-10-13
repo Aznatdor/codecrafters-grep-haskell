@@ -19,8 +19,7 @@ mainMatch rawPattern input
     | otherwise = any (matchPattern pattern) $ tails input
     where pattern = (applyRepeat . parsePattern 1) rawPattern
 
--- matches repeated token and returns all possible input
--- tails after matching
+-- matches repeated token and returns all possible input tails after matching
 -- For example: repeatMatches "a" 1 3 "aaaab" -> ["aaab", "aab", "ab"]
 repeatMatches :: PatternToken -> Int -> Maybe Int -> String -> [String]
 repeatMatches _ _ _ [] = [[]]
@@ -57,3 +56,27 @@ matchPattern (Group group neg:rest) (c:input)
 matchPattern (Literal x:rest) (c:input)
     | (x == c) = matchPattern rest input
     | otherwise = False  
+matchPattern (Repeater token minRep maxRep:rest) input = 
+    any (matchPattern rest) $ repeatMatches token minRep maxRep input
+matchPattern (Alteration _ alts:rest) input =
+    any (True==) [matchPattern (alt ++ rest) input | alt <- alts] 
+
+
+type State = [(Int, String)] -- associative list
+-- pattern, input string, list of all possible branches and inputs for them
+matchPatternExtra :: [PatternToken] -> Input -> [(State, Input)]
+matchPatternExtra _ [] = []                     -- no matches, return "empty state"
+matchPatternExtra [] input = [([], input)]
+matchPatternExtra (AnchorEnd:_)  [] = [([], [])]
+matchPatternExtra (AnchorEnd:_)  _  = [] 
+matchPatternExtra (Alteration numGroup alts:rest) input =
+    [(
+        (numGroup, matchedString) : nextState, nextInput
+     ) | alt <- alts,                                                           -- check all braches 
+         (stateAlt, inputAlt) <- matchPatternExtra alt input,                   -- get input for the recursive call
+         let matchedString  = take (length input - length matchedString) input, -- the only easy part
+         (nextState, nextInput) <- matchPatternExtra rest inputAlt              -- recursive call
+    ]
+matchPatternExtra (Repeater token minRep maxRep:rest) input =
+    [ 
+    ]   
