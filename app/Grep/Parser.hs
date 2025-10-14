@@ -47,7 +47,7 @@ parseAlteration (')':rest) acc groupNum = (acc, rest, groupNum)
 -- For this case we should also know what is going after the group
 parseAlteration ('(':rest) acc groupNum = parseAlteration after updatedAcc newGroupNum
     where (inner, after, newGroupNum) = parseAlteration rest [[]] (groupNum+1)
-          innerAlteration = Alteration groupNum inner
+          innerAlteration = Alteration groupNum $ map applyRepeat inner -- don't forget to apply repeaters for insides of a group!!!
           newHead = (head acc ++ [innerAlteration])
           updatedAcc = newHead : (drop 1 acc)
 -- Add new alteration
