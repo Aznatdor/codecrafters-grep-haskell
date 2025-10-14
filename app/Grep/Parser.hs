@@ -53,6 +53,16 @@ parseAlteration ('(':rest) acc groupNum = parseAlteration after updatedAcc newGr
 -- Add new alteration
 parseAlteration ('|':rest) acc groupNum = parseAlteration rest ([] : acc) groupNum
 -- Regular case: just append current token to the first list
+parseAlteration ('[':'^':xs) acc groupNum = parseAlteration (drop 1 rest) updatedAcc groupNum
+    where (group, rest) = span (/=']') xs
+          token = Group (map Literal group) True
+          newHead = head acc ++ [token]
+          updatedAcc = newHead : (drop 1 acc)
+parseAlteration ('[':xs) acc groupNum = parseAlteration (drop 1 rest) updatedAcc groupNum
+    where (group, rest) = span (/=']') xs
+          token = Group (map Literal group) False
+          newHead = head acc ++ [token]
+          updatedAcc = newHead : (drop 1 acc)
 parseAlteration ('.':rest) acc groupNum = parseAlteration rest updatedAcc groupNum
     where token = Wildcard
           newHead = (head acc ++ [token])
