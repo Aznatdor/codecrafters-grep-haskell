@@ -12,6 +12,7 @@ data PatternToken = Literal Char
     | Repeater PatternToken Int (Maybe Int) -- for matching
     | Wildcard
     | Alteration GroupNum [[PatternToken]]
+    | Backreference GroupNum
     deriving (Show, Eq)
 
 data MetaType = Word | Digit deriving (Show, Eq)
