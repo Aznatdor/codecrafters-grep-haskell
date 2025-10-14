@@ -1,7 +1,7 @@
-module Grep.Matcher (mainMatch, matchPatternExtra) where
+module Grep.Matcher (mainMatch, mainMatchExtra) where
 
 import Data.Char (isDigit)
-import Data.List (tails, isPrefixOf)
+import Data.List (nub, inits, tails, isPrefixOf)
 import Grep.Types
 import Grep.Parser
 
@@ -62,21 +62,25 @@ matchPattern (Alteration _ alts:rest) input =
 
 --------------------------------------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------------------------------
--- Code to deal with patterns with backreferences
+--                                                  Code to deal with backreferences
 --------------------------------------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------------------------------
 type Env = [(Int, String)]      -- (Environment) associative list. Maps group number to matched string
 type State = [(Env, String)]    -- state of all branches. Current environment and string to match
 
 -- Extended version of the mainMatch function
+-- Tries to match every substring with a given pattern
 mainMatchExtra :: Pattern -> Input -> Bool
-mainMatchExtra rawPattern input
-    | (not . null) rawPattern && head rawPattern == '^' = any (null . snd) $ matchPatternExtra (tail pattern) [([], input)]
-    | otherwise = any (null . snd) $ matchPatternExtra pattern $ zip (repeat []) (tails input)
+mainMatchExtra [] _ = True
+mainMatchExtra rawPattern input 
+    | (not . null) rawPattern && head rawPattern == '^' && last rawPattern == '$' = any (null . snd) $ matchPatternExtra (drop 1 $ init pattern) [([], input)] -- match whole
+    | (not . null) rawPattern && last rawPattern == '$' = any (null . snd) $ matchPatternExtra (init pattern) $ zip (repeat []) (tails input) -- match only suffixes
+    | (not . null) rawPattern && head rawPattern == '^' = any (null . snd) $ matchPatternExtra (drop 1 pattern) $ zip (repeat []) (inits input) -- match prefixes
+    | otherwise = any (null . snd) $ matchPatternExtra pattern $ zip (repeat []) substrings -- match any
     where pattern = (applyRepeat . parsePattern 1) rawPattern
+          substrings = nub $ foldl1 (++) $ map inits $ tails input
 
 repeatMatchesExtra :: PatternToken -> Int -> Maybe Int -> Env -> String -> State
-repeatMatchesExtra _ _ _ _ [] = []
 -- Calling matchPatternExtra would yield State variable. We can't omit Env variables (e.g. "(a)+\\1" - we match some group within repetition)
 repeatMatchesExtra token minRep Nothing env input =
      let state = matchPatternExtra testPattern [(env, input)] in -- to prevent infinite loops
@@ -91,6 +95,9 @@ repeatMatchesExtra token minRep (Just maxRep) env input
 
 -- pattern, current state, list of all possible branches and inputs for them
 matchPatternExtra :: [PatternToken] -> State -> State
+-- Add new inputs in state and go further
+matchPatternExtra (Repeater token minRep maxRep:rest) state = matchPatternExtra rest nextState
+    where nextState = foldl (++) [] [repeatMatchesExtra token minRep maxRep env input | (env, input) <- state]
 -- Base case. Just return the accumulated state
 matchPatternExtra [] state = state
 -- For token types AnchorEnd, Literal, Meta, Group, Backreference just filter state and propagate it.
@@ -129,18 +136,15 @@ matchPatternExtra (Backreference groupNum:rest) state = matchPatternExtra rest n
             let nextInput = drop (length ref) input,
             ref `isPrefixOf` input
             ]
--- Add new inputs in state and go further
-matchPatternExtra (Repeater token minRep maxRep:rest) state = matchPatternExtra rest nextState
-    where nextState = foldl (++) [] [repeatMatchesExtra token minRep maxRep env input | (env, input) <- state]
 -- In case of Alternation, return final result. Note recursive calls within list comprehension
 matchPatternExtra (Alteration groupNum alts:rest) state =
     [(newEnv, newInput) |
         (env, input) <- state,                                              -- check all inputs
         alt <- alts,                                                        -- check all alternatives
-        (_, nextInput) <- matchPatternExtra alt state,                      -- input for recursive call
+        (newEnv, nextInput) <- matchPatternExtra alt [(env, input)],        -- input for recursive call
         let matchedString = take (length input - length nextInput) input,   -- string to update current environment
         let currentMatch = (groupNum, matchedString),
-        let nextEnv = currentMatch : env,
+        let nextEnv = currentMatch : newEnv,
         let nextState = [(nextEnv, nextInput)],                             -- state for recursive call
         (newEnv, newInput) <- matchPatternExtra rest nextState
     ]
