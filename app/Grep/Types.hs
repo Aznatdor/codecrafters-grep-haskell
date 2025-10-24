@@ -10,6 +10,7 @@ data PatternToken = Literal Char
     | AnchorEnd 
     | Star | Plus | Question                -- Option types for  preproccessing
     | Repeater PatternToken Int (Maybe Int) -- for matching
+    | Quantifier Int (Maybe Int)            -- For preprocessing {n,m} type of quantifiers
     | Wildcard
     | Alteration GroupNum [[PatternToken]]
     | Backreference GroupNum
