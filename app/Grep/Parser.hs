@@ -30,11 +30,13 @@ parsePattern groupNum ('.':rest) = Wildcard : (parsePattern groupNum rest)
 parsePattern groupNum ('{':xs) = Quantifier minRep maxRep : (parsePattern groupNum $ drop 1 rest)
     where (group, rest) = span (/='}') xs
           (minRepStr, maxRepStrRaw) = span (/=',') group
-          maxRepStr = drop 1 maxRepStrRaw
           minRep :: Int
           minRep = read minRepStr
           maxRep :: Maybe Int
-          maxRep = if null maxRepStr then Nothing else Just $ read maxRepStr
+          maxRep = case length maxRepStrRaw of
+                0 -> Just minRep        -- {n} case
+                1 -> Nothing            -- {n,} case
+                _ -> Just . read $ drop 1 maxRepStrRaw -- {n,m} case
 parsePattern groupNum (char:rest) = Literal char : (parsePattern groupNum rest)
 
 -- Joins repeater token and token to be repeated
