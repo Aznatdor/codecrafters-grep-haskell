@@ -34,7 +34,7 @@ parsePattern groupNum ('{':xs) = Quantifier minRep maxRep : (parsePattern groupN
           minRep :: Int
           minRep = read minRepStr
           maxRep :: Maybe Int
-          maxRep = if null maxRepStr then Just minRep else Just $ read maxRepStr
+          maxRep = if null maxRepStr then Nothing else Just $ read maxRepStr
 parsePattern groupNum (char:rest) = Literal char : (parsePattern groupNum rest)
 
 -- Joins repeater token and token to be repeated
