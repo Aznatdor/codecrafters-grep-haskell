@@ -27,6 +27,14 @@ parsePattern groupNum ('+':rest) = Plus : (parsePattern groupNum rest)
 parsePattern groupNum ('*':rest) = Star : (parsePattern groupNum rest)
 parsePattern groupNum ('?':rest) = Question : (parsePattern groupNum rest)
 parsePattern groupNum ('.':rest) = Wildcard : (parsePattern groupNum rest)
+parsePattern groupNum ('{':xs) = Quantifier minRep maxRep : (parsePattern groupNum $ drop 1 rest)
+    where (group, rest) = span (/='}') xs
+          (minRepStr, maxRepStrRaw) = span (/=',') group
+          maxRepStr = drop 1 maxRepStrRaw
+          minRep :: Int
+          minRep = read minRepStr
+          maxRep :: Maybe Int
+          maxRep = if null maxRepStr then Just minRep else Just $ read maxRepStr
 parsePattern groupNum (char:rest) = Literal char : (parsePattern groupNum rest)
 
 -- Joins repeater token and token to be repeated
@@ -35,6 +43,7 @@ applyRepeat [] = []
 applyRepeat (token:Plus:rest) = Repeater token 1 Nothing : applyRepeat rest
 applyRepeat (token:Star:rest) = Repeater token 0 Nothing : applyRepeat rest
 applyRepeat (token:Question:rest) = Repeater token 0 (Just 1) : applyRepeat rest
+applyRepeat (token:Quantifier minRep maxRep:rest) = Repeater token minRep maxRep : applyRepeat rest
 applyRepeat (token:rest) = token : applyRepeat rest
 
 
